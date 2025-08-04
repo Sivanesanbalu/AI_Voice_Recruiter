@@ -74,6 +74,7 @@ npm run dev
 ## 🙌 Contribution
 Contributions are welcome! Feel free to fork the repo and open a pull request.
 
-Created with ❤️ by Sivanesan B, Rohini R, Vijayalakshimi N.
+
+
 
 
