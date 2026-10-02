@@ -1,7 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "installCommand": "cd ai_interview && npm ci",
-  "buildCommand": "cd ai_interview && npm run build",
-  "outputDirectory": "ai_interview/.next"
+  "framework": "nextjs"
 }

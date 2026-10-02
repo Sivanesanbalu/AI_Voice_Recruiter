@@ -1,81 +1,37 @@
-# 🤖 AI Interviewer - Smart Voice-Based Interview Platform
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-A next-gen AI-powered interview preparation tool where users can log in, generate mock interviews, respond live using voice, and receive instant feedback — powered by Google Gemini Pro and GPT.
+## Getting Started
 
----
-
-## 🧭 Features
-
-### 🔐 User Authentication
-- Secure login system for users and clerks using Supabase.
-- Email-based authentication with role access control.
-
-### 🧑‍💼 Clerk Dashboard
-- Manage users and their interview schedules.
-- Add interview questions and view candidate activity.
-
-### 🎯 Interview Workflow
-- **Create Interview**: Set up a new mock interview session.
-
-- **Live Interview**: Users answer questions via voice using VAPI.
-- **Instant Feedback**: GPT and Gemini Pro evaluate the answers in real-time.
-
-### 📊 Data Management
-- **Supabase Integration** with three main tables:
-  1. `users` – For login/authentication via email.
-  2. `interview_questions` – Dynamically generated using Gemini Pro API.
-  3. `interview_feedback` – Stores AI-evaluated feedback for each session.
-
-### 🧠 AI-Powered Question Generator
-- Uses Gemini Pro API to generate customized interview questions.
-- Questions adapt to candidate background and role.
-
-### 🎤 Real-Time Voice Interaction
-- Uses **Vapi.ai** for live voice-to-voice interviews.
-- Users can answer questions like a real interview.
-
-### 📈 GPT-Based Evaluation
-- After each response, GPT analyzes and gives feedback.
-- Future enhancement: Add CV and portfolio to personalize feedback.
-
----
-
-## 🔧 Tech Stack
-
-| Tool | Usage |
-|------|-------|
-| Supabase | Backend DB & Auth |
-| Next.js | Frontend Framework |
-| Vapi.ai | Voice Interaction |
-| Gemini Pro API | Question Generation |
-| OpenAI GPT | Feedback Evaluation |
-| React + Tailwind | UI Components |
-| Shadcn | Form & UI management |
-
----
-
-## 🛠️ Installation
+First, run the development server:
 
 ```bash
-git clone https://github.com/yourusername/ai-interviewer.git
-cd ai-interviewer
-npm install
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## 📌 Roadmap / Future Features
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-- CV Upload & Analysis
-- Personalized Interview Feedback
-- Calendar Integration for Scheduling
-- Export Feedback as PDF
-- Multi-language Support
+You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
-## 🙌 Contribution
-Contributions are welcome! Feel free to fork the repo and open a pull request.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Learn More
 
-Created with ❤️ by Sivanesan B, Rohini R, Vijayalakshimi N.
+To learn more about Next.js, take a look at the following resources:
 
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+"# voice" 
