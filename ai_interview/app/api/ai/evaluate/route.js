@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { aiClient, model, parseJson } from "@/lib/server-ai";
 
-const SUPA=process.env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPA="https://tprodidywabvkimvdgzi.supabase.co";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwcm9kaWR5d2FidmtpbXZkZ3ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Nzc2NzMsImV4cCI6MjEwNjM1MzY3M30.BvJR1f3LGhz-0Zr57SKhk-ggl86e96LrUubvKQnm1H4";
 async function rpc(name,body){
   const r=await fetch(SUPA+"/rest/v1/rpc/"+name,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
   const t=await r.text(); let j;try{j=JSON.parse(t)}catch{j=t} if(!r.ok) throw new Error(j?.message||t);return j;
