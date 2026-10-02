@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { publicRpc } from "@/lib/supabase-rest";
+import { publicRpc, SUPABASE_URL } from "@/lib/supabase-rest";
 import { Code2, Loader2, Mic, MicOff, Send, Timer } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,7 +31,7 @@ export default function InterviewRoom(){
     if(busy||!session)return;setBusy(true);window.speechSynthesis?.cancel();recognitionRef.current?.stop();
     try{
       const durationSeconds=Math.floor((Date.now()-startedRef.current)/1000);
-      const r=await fetch("/api/ai/evaluate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,sessionId:session.id,transcript:finalTranscript,codingAnswer,codingLanguage,durationSeconds})});
+      const r=await fetch(SUPABASE_URL+"/functions/v1/interview-ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"evaluate",token,sessionId:session.id,transcript:finalTranscript,codingAnswer,codingLanguage,durationSeconds})});
       const j=await r.json();if(!r.ok)throw new Error(j.error||"Evaluation failed");router.replace("/interview/"+token+"/completed");
     }catch(e){toast.error(e.message);setBusy(false)}
   }
