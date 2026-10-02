@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { auth, ensureCompany, getToken, rest } from "@/lib/supabase-rest";
+import { auth, ensureCompany, getToken, rest, SUPABASE_URL, SUPABASE_KEY } from "@/lib/supabase-rest";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Code2, Plus, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,7 @@ export default function CreateInterview(){
     if(!jobPosition.trim()||jobDescription.trim().length<30){toast.error("Add a job title and a detailed job description.");return}
     setBusy(true);
     try{
-      const r=await fetch("/api/ai/questions",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({jobPosition,jobDescription,duration,types,codingEnabled:coding})});
+      const r=await fetch(SUPABASE_URL+"/functions/v1/interview-ai",{method:"POST",headers:{"Content-Type":"application/json",apikey:SUPABASE_KEY,Authorization:"Bearer "+getToken()},body:JSON.stringify({action:"questions",jobPosition,jobDescription,duration,types,codingEnabled:coding})});
       const j=await r.json(); if(!r.ok) throw new Error(j.error||"Question generation failed"); setQuestions(j.questions||[]);setStep(2);
     }catch(e){toast.error(e.message)}finally{setBusy(false)}
   }
