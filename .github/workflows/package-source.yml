@@ -1,0 +1,28 @@
+name: Package Complete Source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/package-source.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Create complete ZIP
+        run: |
+          zip -r InterviewOS-complete-source.zip .             -x ".git/*"             -x "node_modules/*"             -x ".next/*"
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: InterviewOS-complete-source
+          path: InterviewOS-complete-source.zip
+          if-no-files-found: error
+          retention-days: 7
