@@ -1,5 +1,5 @@
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const URL = "https://tprodidywabvkimvdgzi.supabase.co";
+const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwcm9kaWR5d2FidmtpbXZkZ3ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Nzc2NzMsImV4cCI6MjEwNjM1MzY3M30.BvJR1f3LGhz-0Zr57SKhk-ggl86e96LrUubvKQnm1H4";
 
 export const configReady = () => Boolean(URL && KEY);
 
