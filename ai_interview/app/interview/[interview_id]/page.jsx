@@ -1,121 +1,51 @@
-"use client"
-import React, { useContext, useEffect, useState } from 'react'
-import InterviewHeader from '../_components/InterviewHeader'
-import Image from 'next/image'
-import { Clock, Info, Loader2Icon, Video } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/app/components/supabaseClient'
-import { toast } from 'sonner'
-import { InterviewDataContex } from '@/context/InterviewDataContext'
+"use client";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { publicRpc, uploadCv } from "@/lib/supabase-rest";
+import { Clock, FileText, Loader2, Mic, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 
-function Interview() {
-    const {interview_id}=useParams();
-    console.log(interview_id)
-    const [interviewData,setInterviewData]=useState();
-    const [userName,setUserName]=useState();
-    const [userEmail,setUserEmail]=useState();
-    const [loading,setLoading]=useState(false);
-    const {interviewInfo, setInterviewInfo}=useContext(InterviewDataContex);
-    const router = useRouter(); 
-
-    useEffect(()=>{
-        interview_id&&GetInterviewDetails();
-    },[interview_id])
-
-    const GetInterviewDetails=async()=>{
-        setLoading(true);
-        try{
-        let { data: Interviews, error } = await supabase
-            .from('interview')
-            .select('jobPosition,jobDescription,duration,type')
-            .eq('interview_id',interview_id)
-            setInterviewData(Interviews[0]);
-            setLoading(false);
-            if(Interviews?.length==0){
-                toast('Incorrect Interview Link')
-                return ;
-            }
-            
-        }
-        catch(e)
-        {
-            setLoading(false);
-            toast('Incorrect Interview Link')
-        }
-
-        
-
-
-        }
-        const onJoinInterview = async() => {
-            setLoading(true);
-            let { data: Interviews, error } = await supabase
-                .from('interview')
-                .select('*')
-                .eq('interview_id',interview_id);
-
-            console.log(Interviews[0]);
-            setInterviewInfo({
-                userName:userName,
-                userEmail: userEmail,
-                interviewData: Interviews[0]
-
-            });
-            router.push('/interview/' + interview_id+ '/start')
-            setLoading(false);
-
-            
-    }
-  return (
-    <div className='px-10 md:px-28 lg:px-48 xl:px-64 mt-10'>
-        <div className='flex flex-col items-center justify-center border rounded-lg bg-white 
-        p-7 lg:px-33 xl:px-52 mb-1' >
-            <Image src={'/logo.png'} alt='logo' width={100} height={100}
-                    className='w-[60px]'
-            />
-            <h2 className='mt-3'>AI-Powered Interview Platform</h2>
-            <Image src={'/interview.png'} alt='interview'
-                width={500}
-                height={500}
-                className='w-[150px] my-6'
-            />
-
-            <h2 className='font-bold text-xl mt-3'>{interviewData?.jobPosition}</h2>
-            <h2 className='flex gap-2 items-center text-gray-500 mt-2'> <Clock className='h-4 w-4'/> {interviewData?.duration} </h2>
-
-            <div className='w-full'>
-                <h2>Enter your full name</h2>
-                <Input placeholder='e.g. Sivanesan' onChange={(event)=>setUserName(event.target.value)}/>
-            </div>
-            <div className='w-full'>
-                <h2>Enter your Email</h2>
-                <Input placeholder='e.g. Sivanesan@gmail.com' onChange={(event)=>setUserEmail(event.target.value)}/>
-            </div>
-            <div className='p-3 bg-blue-100 flex gap-4 rounded-lg mt-2'>
-                <Info className='text-primary'/>
-                <div>
-                    <h2 className='font-bold'>Before you begin</h2>
-                    <ul>
-                        <li className='text-sm text-primary'>Test your camera and microphone</li>
-                        <li className='text-sm text-primary'>Ensure you have a internet connection</li>
-                        
-                        <li className='text-sm text-primary'>Find a quiet place for interview</li>
-                    </ul>
-                </div>
-            </div>
-            <Button className={'mt-5 w-full font-bold'}
-            disabled={loading || !userName}
-            onClick={()=>onJoinInterview()}
-            
-            > 
-                
-                
-                <Video /> {loading && <Loader2Icon/>} Join Interview</Button>
-        </div>                               
+export default function CandidateEntry(){
+  const {interview_id:token}=useParams(); const router=useRouter();
+  const [interview,setInterview]=useState(null); const [name,setName]=useState(""); const [email,setEmail]=useState(""); const [file,setFile]=useState(null); const [busy,setBusy]=useState(false); const [error,setError]=useState("");
+  useEffect(()=>{(async()=>{try{const data=await publicRpc("public_get_interview",{p_token:token}); if(!data) throw new Error("This interview link is invalid or closed.");setInterview(data)}catch(e){setError(e.message)}})()},[token]);
+  async function toDataUrl(file){ return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file)})}
+  async function start(){
+    if(!name.trim()||!email.includes("@")){toast.error("Enter your name and email.");return}
+    if(!file){toast.error("Upload your CV before starting.");return}
+    setBusy(true);
+    try{
+      const sessionId=await publicRpc("candidate_start_session",{p_token:token,p_name:name,p_email:email});
+      const cvPath=await uploadCv(token,sessionId,file);
+      let cvProfile={};
+      try{
+        const fileData=await toDataUrl(file);
+        const r=await fetch("/api/ai/cv",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({filename:file.name,mimeType:file.type,fileData})});
+        const j=await r.json();cvProfile=j.profile||{};
+      }catch{}
+      await publicRpc("candidate_set_cv",{p_token:token,p_session_id:sessionId,p_cv_path:cvPath,p_cv_profile:cvProfile});
+      localStorage.setItem("interview_session_"+token,sessionId);
+      router.push("/interview/"+token+"/start");
+    }catch(e){toast.error(e.message)}finally{setBusy(false)}
+  }
+  if(error) return <main className="grid min-h-screen place-items-center px-6"><div className="max-w-lg rounded-3xl border border-red-400/20 bg-red-500/10 p-8 text-center"><h1 className="text-2xl font-black">Interview unavailable</h1><p className="mt-3 text-slate-300">{error}</p></div></main>;
+  if(!interview) return <main className="grid min-h-screen place-items-center"><Loader2 className="animate-spin"/></main>;
+  return <main className="mx-auto max-w-3xl px-6 py-12">
+    <div className="rounded-3xl border border-white/10 bg-white/[.04] p-8">
+      <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-bold text-blue-400">AI INTERVIEW</p><h1 className="mt-2 text-3xl font-black">{interview.title}</h1></div><span className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-sm"><Clock size={16}/>{interview.durationMinutes} min</span></div>
+      <p className="mt-5 whitespace-pre-line leading-7 text-slate-400">{String(interview.jobDescription||"").slice(0,600)}{String(interview.jobDescription||"").length>600?"…":""}</p>
+      <div className="mt-6 grid gap-3 md:grid-cols-3">{[
+        [Mic,"Voice-led","AI asks approved questions aloud"],
+        [FileText,"CV-aware","Your CV is used as interview context"],
+        [ShieldCheck,"Structured scoring","Every answer is scored separately"]
+      ].map(([Icon,t,d])=><div key={t} className="rounded-xl border border-white/10 p-4"><Icon className="text-blue-400"/><b className="mt-3 block">{t}</b><span className="mt-1 block text-xs leading-5 text-slate-400">{d}</span></div>)}</div>
+      <div className="mt-8 space-y-4">
+        <input value={name} onChange={e=>setName(e.target.value)} placeholder="Full name" className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3"/>
+        <input value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="Email address" className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3"/>
+        <label className="block rounded-xl border border-dashed border-white/20 bg-slate-900 p-5"><span className="font-bold">Upload CV</span><span className="mt-1 block text-sm text-slate-400">PDF, DOCX or TXT · max 10 MB</span><input type="file" accept=".pdf,.docx,.txt" onChange={e=>setFile(e.target.files?.[0]||null)} className="mt-3 block w-full text-sm"/></label>
+        <div className="rounded-xl bg-amber-500/10 p-4 text-sm text-amber-100">Use a quiet place and allow microphone access. The timer starts when you enter the interview room.</div>
+        <button onClick={start} disabled={busy} className="w-full rounded-xl bg-blue-500 px-5 py-3 font-black disabled:opacity-50">{busy?"Preparing interview...":"Start interview"}</button>
+      </div>
     </div>
-  )
+  </main>
 }
-
-export default Interview

@@ -1,22 +1,20 @@
 "use client";
-
-import React from 'react';
-import CreateOptions from './_components/CreateOptions';
-import LatestInterviewsList from './_components/LatestInterviewsList';
-
-function Dashboard() {
-  return (
-    <div >
-      
-      <h2 className="my-3 font-bold text-2xl">Dashboard</h2>
-
-      
-      <CreateOptions />
-
-      
-      <LatestInterviewsList />
-    </div>
-  );
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { auth, ensureCompany, getToken, rest } from "@/lib/supabase-rest";
+import { toast } from "sonner";
+import { ArrowUpRight, Copy, FileDown, RefreshCw, Sparkles, Users } from "lucide-react";
+function csvEscape(v){ const s=String(v??""); return '"' + s.replaceAll('"','""') + '"'; }
+export default function Dashboard(){
+  const [interviews,setInterviews]=useState([]),[sessions,setSessions]=useState([]),[loading,setLoading]=useState(true),[companyId,setCompanyId]=useState(""),[webhook,setWebhook]=useState(""),[driveEnabled,setDriveEnabled]=useState(false),[syncing,setSyncing]=useState(false),[origin,setOrigin]=useState("");
+  useEffect(()=>{setOrigin(window.location.origin);load()},[]);
+  async function load(){setLoading(true);try{if(!getToken())throw new Error("LOGIN");await auth.user();const cid=await ensureCompany();setCompanyId(cid);const ints=await rest("saas_interviews",{query:"select=*&company_id=eq."+cid+"&order=created_at.desc"});setInterviews(ints||[]);if(ints?.length){const ids=ints.map(x=>x.id).join(",");setSessions(await rest("saas_sessions",{query:"select=*&interview_id=in.("+ids+")&order=created_at.desc"})||[])}else setSessions([]);const cfg=await rest("saas_integrations",{query:"select=*&company_id=eq."+cid});if(cfg?.[0]){setWebhook(cfg[0].drive_webhook_url||"");setDriveEnabled(Boolean(cfg[0].drive_enabled))}}catch(e){if(e.message==="LOGIN"||/JWT|Unauthorized/i.test(e.message))location.href="/login";else toast.error(e.message)}finally{setLoading(false)}}
+  const avg=useMemo(()=>sessions.filter(s=>s.overall_score!=null).reduce((a,s)=>a+Number(s.overall_score),0)/(sessions.filter(s=>s.overall_score!=null).length||1),[sessions]);
+  function exportCsv(){const header=["Candidate","Email","Interview","Status","Overall Score","Started","Completed"];const rows=sessions.map(s=>{const i=interviews.find(x=>x.id===s.interview_id);return[s.candidate_name,s.candidate_email,i?.title||"",s.status,s.overall_score??"",s.started_at,s.completed_at||""]});const csv=[header,...rows].map(r=>r.map(csvEscape).join(",")).join("\n");const blob=new Blob([csv],{type:"text/csv"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="interview-results.csv";a.click();URL.revokeObjectURL(url)}
+  async function saveIntegration(){try{await rest("saas_integrations",{method:"POST",body:{company_id:companyId,drive_webhook_url:webhook||null,drive_enabled:driveEnabled},prefer:"resolution=merge-duplicates,return=representation"});toast.success("Export settings saved")}catch(e){toast.error(e.message)}}
+  async function syncNow(){setSyncing(true);try{const r=await fetch("/api/export/sync",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+getToken()},body:JSON.stringify({companyId})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Sync failed");toast.success("Results synced to connected webhook")}catch(e){toast.error(e.message)}finally{setSyncing(false)}}
+  return <div><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.18em] text-blue-400">Recruiter control center</p><h1 className="mt-2 text-4xl font-black">Interview dashboard</h1><p className="mt-2 text-slate-400">Create interviews, share links and review every candidate result.</p></div><div className="flex gap-2"><button onClick={load} className="rounded-xl border border-white/10 p-3"><RefreshCw size={18}/></button><Link href="/dashboard/create-interview" className="rounded-xl bg-blue-500 px-5 py-3 font-bold">Create interview</Link></div></div>
+  <div className="mt-8 grid gap-4 md:grid-cols-4">{[["Interviews",interviews.length],["Candidates",sessions.length],["Completed",sessions.filter(s=>s.status==="completed").length],["Average score",Math.round(avg)+"%"]].map(([k,v])=><div key={k} className="rounded-2xl border border-white/10 bg-white/[.04] p-5"><p className="text-sm text-slate-400">{k}</p><p className="mt-2 text-3xl font-black">{loading?"—":v}</p></div>)}</div>
+  <section className="mt-10"><div className="flex items-center justify-between"><h2 className="text-2xl font-black">Interviews</h2><button onClick={exportCsv} className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm"><FileDown size={17}/> Export CSV</button></div><div className="mt-4 grid gap-4">{!loading&&!interviews.length&&<div className="rounded-2xl border border-dashed border-white/15 p-10 text-center"><Sparkles className="mx-auto text-blue-400"/><p className="mt-4 font-bold">No interviews yet</p></div>}{interviews.map(i=>{const list=sessions.filter(s=>s.interview_id===i.id),done=list.filter(s=>s.status==="completed"),url=origin+"/interview/"+i.public_token;return <div key={i.id} className="rounded-2xl border border-white/10 bg-white/[.035] p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><div className="flex items-center gap-3"><h3 className="text-xl font-bold">{i.title}</h3><span className={"rounded-full px-2.5 py-1 text-xs "+(i.status==="published"?"bg-emerald-500/15 text-emerald-300":"bg-slate-700")}>{i.status}</span></div><p className="mt-2 text-sm text-slate-400">{i.duration_minutes} min · {i.coding_enabled?"Coding enabled":"No coding round"} · {list.length} candidates</p></div><div className="flex gap-2"><button onClick={()=>{navigator.clipboard.writeText(url);toast.success("Interview link copied")}} className="rounded-xl border border-white/10 p-2.5"><Copy size={17}/></button><Link href={"/scheduled-interview/"+i.id+"/details"} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950">Results <ArrowUpRight size={16}/></Link></div></div>{!!done.length&&<div className="mt-4 flex flex-wrap gap-2">{done.slice(0,5).map(s=><span key={s.id} className="rounded-lg bg-white/5 px-3 py-2 text-sm">{s.candidate_name} · {Math.round(Number(s.overall_score||0))}%</span>)}</div>}</div>})}</div></section>
+  <section className="mt-10 rounded-2xl border border-white/10 bg-white/[.035] p-6"><div className="flex items-start gap-3"><Users className="mt-1 text-blue-400"/><div><h2 className="text-xl font-black">Drive / Sheet export</h2><p className="mt-1 text-sm text-slate-400">Connect an Apps Script, Make, Zapier or internal webhook and sync all completed results as JSON.</p></div></div><div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]"><input value={webhook} onChange={e=>setWebhook(e.target.value)} placeholder="https://your-webhook.example/..." className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3"/><label className="flex items-center gap-2 rounded-xl border border-white/10 px-4"><input type="checkbox" checked={driveEnabled} onChange={e=>setDriveEnabled(e.target.checked)}/> Enable</label><button onClick={saveIntegration} className="rounded-xl bg-white px-4 py-3 font-bold text-slate-950">Save</button></div><button onClick={syncNow} disabled={!driveEnabled||!webhook||syncing} className="mt-3 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-200 disabled:opacity-40">{syncing?"Syncing...":"Sync completed results now"}</button></section></div>
 }
-
-export default Dashboard;

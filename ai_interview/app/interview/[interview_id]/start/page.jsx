@@ -1,221 +1,53 @@
-'use client'
+"use client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { publicRpc } from "@/lib/supabase-rest";
+import { Code2, Loader2, Mic, MicOff, Send, Timer } from "lucide-react";
+import { toast } from "sonner";
 
-import { InterviewDataContex } from '@/context/InterviewDataContext';
-import { Loader2Icon, Mic, Phone, Timer } from 'lucide-react';
-import Image from 'next/image';
-import React, { useContext, useEffect, useState } from 'react';
-import Vapi from '@vapi-ai/web';
-import AlertConfirmation from './_components/AlertConfirmation';
-import { toast } from 'sonner';
-import { supabase } from '@/app/components/supabaseClient';
-import { useParams, useRouter } from 'next/navigation';
-import axios from 'axios';
+export default function InterviewRoom(){
+  const {interview_id:token}=useParams(); const router=useRouter();
+  const [interview,setInterview]=useState(null); const [session,setSession]=useState(null); const [idx,setIdx]=useState(0); const [answer,setAnswer]=useState(""); const [transcript,setTranscript]=useState([]); const [remaining,setRemaining]=useState(0); const [listening,setListening]=useState(false); const [codingAnswer,setCodingAnswer]=useState(""); const [codingLanguage,setCodingLanguage]=useState("javascript"); const [busy,setBusy]=useState(false); const recognitionRef=useRef(null); const startedRef=useRef(Date.now());
+  const questions=interview?.questions||[]; const current=questions[idx];
+  const displayTime=useMemo(()=>String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0"),[remaining]);
 
-function StartInterview() {
-  const { interviewInfo } = useContext(InterviewDataContex);
-  const vapi = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
-  const [activeUser, setActiveUser] = useState(false);
-  const [conversation, setConversation] = useState();
-  const { interview_id } = useParams();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [feedbackGenerated, setFeedbackGenerated] = useState(false);
-
-  useEffect(() => {
-    if (interviewInfo) startCall();
-  }, [interviewInfo]);
-
-  const startCall = () => {
-    const questionList = interviewInfo?.interviewData?.questionList
-      .map((item) => item?.question)
-      .join(', ');
-
-    const assistantOptions = {
-      name: 'AI Recruiter',
-      firstMessage: `Hi ${interviewInfo?.userName}, how are you? Ready for your interview on ${interviewInfo?.interviewData?.jobPosition}?`,
-      transcriber: {
-        provider: 'deepgram',
-        model: 'nova-2',
-        language: 'en-US',
-      },
-      voice: {
-        provider: 'playht',
-        voiceId: 'jennifer',
-      },
-      model: {
-        provider: 'openai',
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `
-              You are an AI voice assistant conducting interviews.
-              Begin with a friendly introduction like:
-              "Hey there! Welcome to your ${interviewInfo?.interviewData?.jobPosition} interview. Let’s get started with a few questions!"
-              Ask the following questions one by one, listening after each:
-              Questions: ${questionList}
-              Give hints if needed, respond naturally, and offer feedback.
-              After 5-7 questions, summarize their performance positively.
-              End by thanking them and wishing good luck.
-              Stay engaging, friendly, and focused on React.
-            `.trim(),
-          },
-        ],
-      },
-    };
-
-    vapi.start(assistantOptions);
-  };
-
-  const stopInterview = async () => {
-    setLoading(true);
-    try {
-      await vapi.stop();
-      console.log('Call manually stopped.');
-      await GenerateFeedback();
-    } catch (err) {
-      console.error('Error stopping interview:', err);
-      toast.error('Failed to stop interview');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const GenerateFeedback = async () => {
-    if (feedbackGenerated || !conversation) return;
-    setFeedbackGenerated(true);
-    try {
-      const result = await axios.post('/api/ai-feedback', { conversation });
-
-      // The server should return full parsed feedback in `.data`, not `.data.content`
-      const feedback = result.data;
-
-      const { error } = await supabase.from('interview-feedback').insert([
-        {
-          userName: interviewInfo?.userName,
-          userEmail: interviewInfo?.userEmail,
-          interview_id,
-          feedback,
-          recommended: false, // Make sure this column exists in Supabase
-        },
-      ]);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        toast.error('Failed to save feedback');
-      } else {
-        toast.success('Feedback saved');
-        router.replace(`/interview/${interview_id}/completed`);
-      }
-    } catch (err) {
-      console.error('Feedback generation error:', err);
-      toast.error('Failed to generate feedback');
-    }
-  };
-
-  useEffect(() => {
-    const handleMessage = (message) => {
-      if (message?.conversation) {
-        const convoString = JSON.stringify(message.conversation);
-        setConversation(convoString);
-      }
-    };
-
-    const handleCallStart = () => {
-      toast('Call Connected...');
-    };
-
-    const handleSpeechStart = () => {
-      setActiveUser(false);
-    };
-
-    const handleSpeechEnd = () => {
-      setActiveUser(true);
-    };
-
-    const handleCallEnd = () => {
-      toast('Interview ended');
-      GenerateFeedback();
-    };
-
-    vapi.on('message', handleMessage);
-    vapi.on('call-start', handleCallStart);
-    vapi.on('Speech-Start', handleSpeechStart);
-    vapi.on('Speech-end', handleSpeechEnd);
-    vapi.on('call-end', handleCallEnd);
-
-    return () => {
-      vapi.off('message', handleMessage);
-      vapi.off('call-start', handleCallStart);
-      vapi.off('Speech-Start', handleSpeechStart);
-      vapi.off('Speech-end', handleSpeechEnd);
-      vapi.off('call-end', handleCallEnd);
-    };
-  }, []);
-
-  return (
-    <div className='p-20 lg:px-48 xl:px-56'>
-      <h2 className='font-bold text-xl flex justify-between'>
-        AI Interview Session
-        <span className='flex gap-2 items-center'>
-          <Timer />
-          00:00:00
-        </span>
-      </h2>
-
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-7'>
-        {/* AI Recruiter */}
-        <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center mt-5'>
-          <div className='relative'>
-            {!activeUser && (
-              <span className='absolute inset-0 rounded-full bg-blue-500 opacity-75 animate-ping'></span>
-            )}
-            <Image
-              src='/OIP.png'
-              alt='AI'
-              width={60}
-              height={60}
-              className='w-[60px] h-[60px] rounded-full object-cover'
-            />
-          </div>
-          <h2>AI Recruiter</h2>
-        </div>
-
-        {/* Candidate */}
-        <div className='bg-white h-[400px] rounded-lg border flex flex-col gap-3 items-center justify-center mt-5'>
-          <div className='relative'>
-            {activeUser && (
-              <span className='absolute inset-0 rounded-full bg-blue-500 opacity-75 animate-ping'></span>
-            )}
-            <h2 className='text-2xl bg-primary text-white rounded-full p-6'>
-              {interviewInfo?.userName?.[0] || 'U'}
-            </h2>
-          </div>
-          <h2>{interviewInfo?.userName}</h2>
-        </div>
+  useEffect(()=>{(async()=>{try{const sessionId=localStorage.getItem("interview_session_"+token);if(!sessionId) throw new Error("Start from the interview link."); const [i,s]=await Promise.all([publicRpc("public_get_interview",{p_token:token}),publicRpc("candidate_get_session",{p_token:token,p_session_id:sessionId})]);if(!i||!s)throw new Error("Invalid interview session");setInterview(i);setSession({...s,id:sessionId});setRemaining(Number(i.durationMinutes)*60);startedRef.current=Date.now();}catch(e){toast.error(e.message);router.replace("/interview/"+token)}})()},[token]);
+  useEffect(()=>{if(!interview)return;const t=setInterval(()=>setRemaining(r=>{if(r<=1){clearInterval(t);finish(true);return 0}return r-1}),1000);return()=>clearInterval(t)},[interview,transcript,codingAnswer]);
+  useEffect(()=>{if(current&&!current.isCoding)speak(current.question)},[idx,interview]);
+  function speak(text){ if(typeof window==="undefined"||!window.speechSynthesis)return; window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text);u.rate=0.96;window.speechSynthesis.speak(u); }
+  function toggleMic(){
+    if(listening){recognitionRef.current?.stop();setListening(false);return}
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast.error("Speech recognition is not supported in this browser. Type your answer instead.");return}
+    const r=new SR();r.continuous=true;r.interimResults=true;r.lang="en-IN";r.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";setAnswer(text.trim())};r.onend=()=>setListening(false);r.onerror=()=>setListening(false);recognitionRef.current=r;r.start();setListening(true);
+  }
+  async function next(){
+    if(!current)return;
+    if(current.isCoding){if(!codingAnswer.trim()){toast.error("Add your coding answer.");return}}else if(!answer.trim()){toast.error("Answer the question before continuing.");return}
+    const entry={questionId:current.id,question:current.question,category:current.category,answer:current.isCoding?codingAnswer:answer,isCoding:Boolean(current.isCoding),at:new Date().toISOString()};
+    const nextTranscript=[...transcript,entry];setTranscript(nextTranscript);setAnswer("");recognitionRef.current?.stop();setListening(false);
+    if(idx>=questions.length-1) await finish(false,nextTranscript); else setIdx(i=>i+1);
+  }
+  async function finish(auto=false,finalTranscript=transcript){
+    if(busy||!session)return;setBusy(true);window.speechSynthesis?.cancel();recognitionRef.current?.stop();
+    try{
+      const durationSeconds=Math.floor((Date.now()-startedRef.current)/1000);
+      const r=await fetch("/api/ai/evaluate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,sessionId:session.id,transcript:finalTranscript,codingAnswer,codingLanguage,durationSeconds})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error||"Evaluation failed");router.replace("/interview/"+token+"/completed");
+    }catch(e){toast.error(e.message);setBusy(false)}
+  }
+  if(!interview||!session)return <main className="grid min-h-screen place-items-center"><Loader2 className="animate-spin"/></main>;
+  return <main className="min-h-screen px-5 py-6">
+    <div className="mx-auto max-w-5xl">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-5 py-4"><div><p className="text-sm text-slate-400">{interview.title}</p><h1 className="font-black">AI Interview Room</h1></div><div className={"flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-lg "+(remaining<60?"bg-red-500/15 text-red-300":"bg-white/5")}><Timer size={18}/>{displayTime}</div></header>
+      <div className="mt-5 grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
+        <aside className="rounded-3xl border border-white/10 bg-gradient-to-b from-blue-500/15 to-white/[.03] p-6 text-center"><div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-blue-500 text-3xl font-black shadow-[0_0_70px_rgba(59,130,246,.35)]">AI</div><h2 className="mt-5 text-xl font-black">AI Interviewer</h2><p className="mt-2 text-sm leading-6 text-slate-400">Question {idx+1} of {questions.length}. Answers are evaluated only against the role, question and evidence you provide.</p><button onClick={()=>speak(current?.question||"")} className="mt-5 rounded-xl border border-white/10 px-4 py-2 text-sm">Repeat question</button></aside>
+        <section className="rounded-3xl border border-white/10 bg-white/[.04] p-6">
+          <div className="flex items-center gap-2 text-sm font-bold text-blue-400">{current?.isCoding?<Code2 size={17}/>:<Mic size={17}/>} {current?.category||"Question"}</div>
+          <h2 className="mt-3 text-2xl font-black leading-9">{current?.question}</h2>
+          {current?.isCoding?<div className="mt-6"><select value={codingLanguage} onChange={e=>setCodingLanguage(e.target.value)} className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-sm">{["javascript","python","java","c++","sql","other"].map(x=><option key={x}>{x}</option>)}</select><textarea value={codingAnswer} onChange={e=>setCodingAnswer(e.target.value)} rows={14} spellCheck={false} placeholder="Write your solution and explain key decisions..." className="mt-3 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-4 font-mono text-sm"/></div>:<div className="mt-6"><textarea value={answer} onChange={e=>setAnswer(e.target.value)} rows={9} placeholder="Speak or type your answer..." className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-4"/><button onClick={toggleMic} className={"mt-3 flex items-center gap-2 rounded-xl px-4 py-2 font-bold "+(listening?"bg-red-500":"bg-blue-500")}>{listening?<><MicOff size={18}/> Stop listening</>:<><Mic size={18}/> Speak answer</>}</button></div>}
+          <div className="mt-6 flex items-center justify-between"><span className="text-xs text-slate-500">Max score: {current?.maxScore||10}</span><button onClick={next} disabled={busy} className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-black text-slate-950 disabled:opacity-50">{busy?"Evaluating...":idx===questions.length-1?"Complete interview":"Submit & next"}<Send size={17}/></button></div>
+        </section>
       </div>
-
-      {/* Controls */}
-      <div className='flex items-center gap-5 justify-center mt-3'>
-        <Mic className='h-12 w-12 bg-gray-700 text-white rounded-full cursor-pointer' />
-
-        <AlertConfirmation stopInterview={stopInterview}>
-          {!loading ? (
-            <Phone
-              className='h-12 w-12 bg-red-700 text-white rounded-full cursor-pointer'
-              onClick={stopInterview}
-            />
-          ) : (
-            <Loader2Icon className='h-12 w-12 animate-spin text-gray-500' />
-          )}
-        </AlertConfirmation>
-      </div>
-
-      <h2 className='text-sm text-gray-400 text-center mt-5'>
-        Interview in Progress....
-      </h2>
     </div>
-  );
+  </main>
 }
-
-export default StartInterview;

@@ -1,41 +1,11 @@
-'use client';
+"use client";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { publicRpc } from "@/lib/supabase-rest";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-export default function InterviewCompleted() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push('/dashboard'); // Optional auto redirect
-    }, 8000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-200 text-center p-6">
-      <div className="text-6xl animate-bounce mb-4">🎉</div>
-
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-        Interview Completed!
-      </h1>
-
-      <p className="text-gray-600 mt-3 text-lg max-w-xl">
-        Thank you for your time and participation. We’ve recorded your answers and will get back to you soon.
-      </p>
-
-      <div className="mt-6">
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-300"
-        >
-          Go to Dashboard
-        </button>
-      </div>
-
-      <p className="mt-6 text-sm text-gray-400">You’ll be redirected shortly...</p>
-    </div>
-  );
+export default function Completed(){
+  const {interview_id:token}=useParams();const [session,setSession]=useState(null);
+  useEffect(()=>{(async()=>{const id=localStorage.getItem("interview_session_"+token);if(id){try{setSession(await publicRpc("candidate_get_session",{p_token:token,p_session_id:id}))}catch{}}})()},[token]);
+  return <main className="grid min-h-screen place-items-center px-6"><div className="max-w-xl rounded-3xl border border-white/10 bg-white/[.04] p-10 text-center">{!session?<Loader2 className="mx-auto animate-spin"/>:<><CheckCircle2 className="mx-auto h-16 w-16 text-emerald-400"/><h1 className="mt-5 text-3xl font-black">Interview completed</h1><p className="mt-3 leading-7 text-slate-400">Thank you, {session.candidateName}. Your answers and interview transcript have been submitted to the recruiting team.</p><p className="mt-5 text-sm text-slate-500">You can close this page now.</p></>}</div></main>
 }
