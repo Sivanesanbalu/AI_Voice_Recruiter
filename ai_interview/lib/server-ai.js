@@ -14,8 +14,8 @@ export function aiClient() {
 }
 
 export async function verifyRecruiter(req) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = "https://tprodidywabvkimvdgzi.supabase.co";
+  const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwcm9kaWR5d2FidmtpbXZkZ3ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Nzc2NzMsImV4cCI6MjEwNjM1MzY3M30.BvJR1f3LGhz-0Zr57SKhk-ggl86e96LrUubvKQnm1H4";
   const authorization = req.headers.get("authorization");
   if (!url || !key || !authorization?.startsWith("Bearer ")) throw new Error("Unauthorized");
   const response = await fetch(url + "/auth/v1/user", {
