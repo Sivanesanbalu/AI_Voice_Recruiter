@@ -49,7 +49,7 @@ beforeEach(()=>{
 describe("InterviewOS smoke",()=>{
   it("landing renders",()=>{
     render(<Home session={null} company={{}} logout={()=>{}}/>);
-    expect(screen.getByText(/From job description to structured interview/i)).toBeInTheDocument();
+    expect(screen.getByText(/Structured first-round interviews that run/i)).toBeInTheDocument();
   });
 
   it("auth renders",()=>{
