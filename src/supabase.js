@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-const url="https://tprodidywabvkimvdgzi.supabase.co";
-const key="sb_publishable_7c0UFjnCOJM-qxCgms0nMA_hCXGOLOo";
-export const supabase=createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true}});
-export const AI_URL=`${url}/functions/v1/interview-ai`;
+export const SUPABASE_URL="https://tprodidywabvkimvdgzi.supabase.co";
+export const SUPABASE_KEY="sb_publishable_7c0UFjnCOJM-qxCgms0nMA_hCXGOLOo";
+export const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+export const AI_URL=`${SUPABASE_URL}/functions/v1/interview-ai`;
