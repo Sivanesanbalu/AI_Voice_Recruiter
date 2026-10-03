@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "ignoreCommand": "if [ \"$VERCEL_PROJECT_PRODUCTION_URL\" = \"ai-voice-recruiter-669c.vercel.app\" ]; then exit 1; else exit 0; fi",
   "rewrites": [
     {
       "source": "/(.*)",
